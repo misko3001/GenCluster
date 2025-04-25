@@ -1,0 +1,70 @@
+problem:
+  input_molecule_path: 'data/examples/3-Ag_4Au_1/molecule.xyz'
+  molecule_charge: 0
+  molecule_multiplicity: 1
+  cluster_size: 3
+  checkpoint_every_nth_generation: 1
+  leaderboard_size: 10
+  leaderboard_rmsd_threshold: 2.5
+  internuclear_angstrom_distances:
+    'Au-Au': 2.8, 3
+    'Au-Ag': 2.75, 2.9
+    'Ag-Ag': 2.8, 3
+
+population:
+  size: 21
+  max_age: 5
+
+optimizer:
+  args:
+    optimize_every_nth_generation: 3
+    optimize_n_best: 2
+    optimize_rmsd_distinct_threshold: 3
+  optimization_program: 'ASE'
+  processes: 2
+  max_optimization_steps: 75
+  initial_optimization: true
+  debug: false
+  model:
+    program: 'orca'
+    method: 'XTB1'
+    threads: 3
+    max_threads: 32
+
+generator:
+  name: 'RandomGeometryGenerator'
+  args:
+    min_angstrom_distance: 2.85
+    max_angstrom_distance: 2.95
+
+selector:
+  name: 'RmsdTournamentSelector'
+  args:
+    tournament_size: 3
+  elite_quantity: 1
+
+crossover:
+  name: 'SpliceCrossover'
+  args:
+    probability: 0.5
+
+mutators:
+  - creep:
+      name: 'TwinningMutator'
+      args:
+        probability: 0.3
+
+terminators:
+  - max_iter:
+      name: 'MaxIterationsTerminator'
+      args:
+        max_iterations: 50
+  - stagnation:
+      name: 'StagnationTerminator'
+      args:
+        max_stagnating_iterations: 15
+  - time:
+      name: 'DurationTerminator'
+      args:
+        unit_type: 'minutes'
+        unit_value: 5

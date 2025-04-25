@@ -1,0 +1,75 @@
+problem:
+  input_molecule_path: 'data/examples/Au_8/molecule.xyz'
+  molecule_charge: 0
+  molecule_multiplicity: 1
+  cluster_size: 8
+  checkpoint_every_nth_generation: 2
+  leaderboard_size: 10
+  leaderboard_rmsd_threshold: 0.25
+  internuclear_angstrom_distances:
+    'Au-Au': 2.5, 3
+
+population:
+  size: 24
+  max_age: 12
+
+optimizer:
+  args:
+    optimize_every_nth_generation: 2
+    optimize_n_best: 12
+    min_unoptimized_gradient_norm: 0.001
+    optimize_rmsd_distinct_threshold: 0.15
+  optimization_program: 'Native'
+  processes: 6
+  initial_optimization: true
+  debug: false
+  model:
+    program: 'xtb'
+    method: 'GFN1-xTB'
+    threads: 2
+    max_threads: 32
+
+evaluator:
+  processes: 6
+  debug: false
+  model:
+    program: 'xtb'
+    method: 'GFN1-xTB'
+    threads: 2
+    max_threads: 32
+    config_path: 'data/config/xtb_config'
+
+generator:
+  name: 'RandomGeometryGenerator'
+  args:
+    min_angstrom_distance: 2.85
+    max_angstrom_distance: 2.95
+
+selector:
+  name: 'RmsdTournamentSelector'
+  args:
+    tournament_size: 3
+  elite_quantity: 1
+
+crossover:
+  name: 'SpliceCrossover'
+  args:
+    probability: 0.6
+
+mutators:
+  - creep:
+      name: 'TwinningMutator'
+      args:
+        probability: 0.4
+
+terminators:
+  - max_iter:
+      name: 'MaxIterationsTerminator'
+      args:
+        max_iterations: 100
+  - convergence:
+      name: 'ConvergenceTerminator'
+      args:
+        last_m_generations: 16
+        last_n_generations: 8
+        delta: 0.0001

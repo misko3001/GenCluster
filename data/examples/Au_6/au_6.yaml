@@ -1,0 +1,84 @@
+problem:
+  input_molecule_path: 'data/examples/Au_6/molecule.xyz'
+  molecule_charge: 0
+  molecule_multiplicity: 1
+  cluster_size: 6
+  checkpoint_every_nth_generation: 2
+  leaderboard_size: 15
+  leaderboard_rmsd_threshold: 0.25
+  internuclear_angstrom_distances:
+    'Au-Au': 2.5, 3
+  alignment_methods:
+    - 'brute_force'
+  rmsd_methods:
+    - 'brute_force'
+
+population:
+  size: 24
+  max_age: 10
+  initial_guess_path: 'data/examples/Au_6/initial_guesses'
+
+optimizer:
+  args:
+    optimize_every_nth_generation: 1
+    optimize_n_best: 12
+    optimize_rmsd_distinct_threshold: 0.15
+    min_unoptimized_gradient_norm: 0.001
+  optimization_program: 'Native'
+  XTB_optimization_level: 'extreme'
+  processes: 3
+  initial_optimization: true
+  debug: false
+  model:
+    program: 'xtb'
+    method: 'GFN1-xTB'
+    threads: 2
+    max_threads: 32
+
+evaluator:
+  processes: 3
+  debug: false
+  model:
+    program: 'xtb'
+    method: 'GFN1-xTB'
+    threads: 2
+    max_threads: 32
+    config_path: 'data/config/xtb_config'
+
+generator:
+  name: 'RandomGeometryGenerator'
+  args:
+    min_angstrom_distance: 2.85
+    max_angstrom_distance: 2.95
+
+selector:
+  name: 'RmsdTournamentSelector'
+  args:
+    tournament_size: 3
+  elite_quantity: 1
+
+crossover:
+  name: 'SpliceCrossover'
+  args:
+    probability: 0.6
+
+mutators:
+  - creep:
+      name: 'TwinningMutator'
+      args:
+        probability: 0.4
+
+terminators:
+  - max_iter:
+      name: 'MaxIterationsTerminator'
+      args:
+        max_iterations: 50
+  - stagnation:
+      name: 'StagnationTerminator'
+      args:
+        max_stagnating_iterations: 20
+  - time:
+      name: 'DurationTerminator'
+      args:
+        unit_type: 'minutes'
+        unit_value: 3

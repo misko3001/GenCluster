@@ -1,0 +1,162 @@
+
+# Specifies general problem parameters
+problem:
+  input_molecule_path: 'data/examples/Au_8/molecule.xyz' # Path to the input molecule (.xyz) [Required]
+  molecule_charge: 0 # Specifies the cluster's charge [Required]
+  molecule_multiplicity: 1 # Specifies the cluster's multiplicity [Required]
+  cluster_size: 8 # The number of input molecules inside a single cluster [Required]
+  working_directory: 'data/out' # Directory which is used to store results and temp files [Optional - defaults to 'data/out/<current_timestamp>']
+  checkpoint_every_nth_generation: 2 # Creates a checkpoint after every n-th generation from which can algorithm be restarted [Optional]
+  leaderboard_size: 10 # Defines the maximum size of output molecules [Required]
+  leaderboard_rmsd_threshold: 1 # Defines the minimum distinct RMSD threshold for saving/replacing molecules in the leaderboard [Optional]
+  # Defines the internuclear bond distances in the cluster - input molecule must be able to form a connected molecule [Required]
+  internuclear_angstrom_distances:
+    'Au-Au': 2.5, 3 # Defines the minimum and maximum angstrom distances between two Au atoms
+    'Au-*': 2.5, 3 # Wildcards with * are supported (* must be an element other than the current one e.g. Au in this case)
+    '*-*': 2.5, 3 # The distance is chosen in order from the most specific one (Au-Ag) to the most general one (*-*)
+  # Specifies a list of RMSD methods to be used for calculations (can be eigen, rdkit, hungarian_rdkit, inertia_hungarian_rdkit or brute_force)
+  # [Optional - defaults to eigen]
+  rmsd_methods:
+    - 'eigen'
+  # Specifies a list of alignment methods to be used for calculations (can be rdkit, hungarian_rdkit, inertia_hungarian_rdkit or brute_force)
+  # [Optional - defaults to rdkit, hungarian_rdkit, inertia_hungarian_rdkit]
+  alignment_methods:
+    - 'rdkit'
+    - 'hungarian_rdkit'
+    - 'inertia_hungarian_rdkit'
+
+# Defines the parameters of the population in the genetic algorithm
+population:
+  size: 11 # Defines the number of clusters inside a single generation [Required]
+  max_age: 10 # Defines the maximum number of generations that a single cluster can exist unmodified [Optional]
+  # Path to a file with .xyz initial guesses that will be added to the initial pop instead of randomly generated clusters [Optional]
+  initial_guess_path: 'data/examples/Au_6/initial_guesses'
+
+# Specifies which program and method will be used for optimizing geometries of molecules
+# Optional, if evaluator is provided (if not set optimizations will not be performed)
+optimizer:
+  args: # Arguments which modify how molecules are optimized in each generation
+    optimize_every_nth_generation: 2 # Specifies after how many generations should optimization happen [Optional - defaults to 1]
+    optimize_n_best: 4 # Specifies the maximum number of molecules to be optimized (sorted by fitness values) [Optional]
+    optimize_rmsd_distinct_threshold: 2 # Specifies the RMSD threshold for optimizing only distinct molecules [Optional]
+    min_unoptimized_gradient_norm: 0.01 # Only individuals with gradient norm less than this value will be optimized (if available) [Optional]
+  optimization_program: 'ASE' # Optimization program to be used (ASE, gaussian, SciPy, Native [XTB]) [Required]
+  XTB_optimization_level: 'extreme' # Sets the optimization level of XTB optimization (normal, vtight, extreme, ...) [Optional - defaults to extreme]
+  ASE_optimization_algorithm: 'LBFGS' # If using ASE allows to specify which algorithm to use [Optional - defaults to LBFGS]
+  ASE_forces_convergence_criterion: 0.02 # If using ASE specifies the convergence criterion in eV/Angstroms [Optional - defaults to 0.02]
+  processes: 4 # Number of processes to be used for optimization [Required]
+  max_optimization_steps: 100 # Maximum number of steps during optimization [Optional - if Native program]
+  initial_optimization: true # If set to true will perform optimization after generating the initial population [Required]
+  debug: true # If set to true, will save debug files of failed optimizations in working directory [Required]
+  # Defines the model which is used for calculations. Example of different formats:
+  #   orca:
+  #     1. B3LYP DEF2-SVP OPT D4
+  #     2. HF-3c
+  #   pyscf:
+  #     1. PBE/def2-SVP
+  #     2. PBE0/def2-SVP
+  #   xtb:
+  #     1. GFN2-xTB
+  #     2. GFN1-xTB
+  model:
+    program: 'orca' # Name of the program to be used for calculations [Required]
+    method: 'XTB1' # Name of the method to be used for calculations [Required]
+    threads: 3 # Number of threads each process will use - corresponds to the %npal argument [Required]
+    max_threads: 32 # Maximum number of threads used in a single calculation
+
+
+# Specifies which program and method will be used for evaluating energies of molecules
+# Optional, if optimizer is provided (if not set will use optimizer for energy evaluations)
+evaluator:
+  processes: 6 # Number of processes to be used for evaluations [Required]
+  debug: false # If set to true, will save debug files of failed evals in working directory [Required]
+  model: # Defines the model which is used for calculations (same as optimizer model)
+    program: 'xtb' # Name of the program to be used for calculations [Required]
+    method: 'GFN1-xTB' # Name of the method to be used for calculations [Required]
+    threads: 2 # Number of threads each process will use - corresponds to the %npal argument [Required]
+    max_threads: 32 # Maximum number of threads used in a single calculation
+    config_path: 'data/config/xtb_config' # Config path for program (currently only xtb supported) [Optional]
+
+
+# Generator is used to generate initial molecules and regenerate invalid ones
+# Must always be provided
+generator:
+  # Places the molecules randomly
+  name: 'RandomGeometryGenerator' # Identifier of a generator [Required]
+  args: # Arguments that set parameters of a generator
+    min_angstrom_distance: 2.85 # Specifies the minimum angstrom distance between the centers of masses of input molecules [Required]
+    max_angstrom_distance: 2.95 # Specifies the maximum angstrom distance between the centers of masses of input molecules [Required]
+  # PackMolGenerator is currently not implemented
+
+# Specifies the selector which will be used in the genetic algorithm
+# Must always be provided
+selector:
+  # Uses tournament selection while applying RMSD fitness penalty
+  name: 'RmsdTournamentSelector' # Identifier of a selector [Required]
+  args: # Arguments that set parameters of a selector
+    tournament_size: 3 # Specifies the tournament size [Required]
+  elite_quantity: 1 # If set will select n best individuals to be moved to the next generation without changes [Optional]
+
+#  # Uses tournament selection
+#  name: 'TournamentSelector' # Identifier of a selector [Required]
+#  args: # Arguments that set parameters of a selector
+#    tournament_size: 3 # Specifies the tournament size [Required]
+#  elite_quantity: 1 # If set will select n best individuals to be moved to the next generation without changes [Optional]
+
+# Specifies the crossover operator to be used in the genetic algorithm
+# Must always be provided
+crossover:
+  # Splits two molecules into two and then reconnects the complementary parts of each other
+  name: 'SpliceCrossover' # Identifier of a crossover operator [Required]
+  args: # Arguments that set parameters of a crossover operator
+    probability: 0.25 # Probability of crossover [Required]
+
+#  # Chooses a random sequence of atoms to be exchanged between two molecules
+#  name: 'TwoPointCrossover' # Identifier of a crossover operator [Required]
+#  args: # Arguments that set parameters of a crossover operator
+#    probability: 0.25 # Probability of crossover [Required]
+
+# Specifies the mutators will be used in the genetic algorithm
+# Identifiers such as creep or twinning are arbitrary, the name inside specifies which mutator to use
+# Can be left empty
+mutators:
+  # Shifts atom coordinates by random value from a set interval
+  - creep:
+      name: 'CreepMutator' # Identifier of a mutator [Required]
+      args: # Arguments that set parameters of a specified mutator
+        probability: 0.1 # Probability of mutation [Required]
+        per_atom_probability: 0.25 # Probability of each atom being modified [Required]
+        max_mutation_strength: 0.2 # Magnitude of how much the mutated atom will have its coordinate shifted (-.2, 0.2) [Required]
+  # Splits molecule into two, rotates one split part and then reconnects the molecule back
+  - twinning:
+      name: 'TwinningMutator' # Identifier of a mutator [Required]
+      args: # Arguments that set parameters of a specified mutator
+        probability: 0.3 # Probability of mutation [Required]
+
+# Specifies the terminating conditions of the genetic algorithm
+# Identifiers such as max_iter or time are arbitrary, the name inside specifies which terminator to use
+# At least one terminator must be provided
+terminators:
+  # Stops algorithm after reaching maximum number of iterations (generations)
+  - max_iter:
+      name: 'MaxIterationsTerminator' # Identifier of a terminator [Required]
+      args: # Arguments that set parameters of a specified terminator
+        max_iterations: 25 # Defines the maximum number of iterations [Required]\
+  # Stops algorithm if the fitness has not improved in the last n generations
+  - stagnation:
+      name: 'StagnationTerminator' # Identifier of a terminator [Required]
+      args: # Arguments that set parameters of a specified terminator
+        max_stagnating_iterations: 10 # Defines the maximum number of iterations with same best fitness value [Required]
+  # Stops algorithm after specified amount of time has elapsed (will wait to finish the current (ongoing) generation)
+  - time:
+      name: 'DurationTerminator' # Identifier of a terminator [Required]
+      args: # Arguments that set parameters of a specified terminator
+        unit_type: 'minutes' # Time unit after which algorithm will stop (can be seconds, minutes or hours) [Required]
+        unit_value: 1 # Time value after which algorithm will stop [Required]
+  # Stops algorithm if the average fitness values over last m and n generations is less than delta
+  - convergence:
+      name: 'ConvergenceTerminator' # Identifier of a terminator [Required]
+      args: # Arguments that set parameters of a specified terminator
+        last_m_generations: 15 # Specifies the size of m (the algorithm will stop only after at least m generations have passed) [Required]
+        last_n_generations: 5 # Specifies the size of n [Required]
+        delta: 0.001 # Specifies the minimal difference between the two fitness values [Required]
